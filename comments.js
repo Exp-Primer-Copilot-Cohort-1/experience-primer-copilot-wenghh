@@ -1,76 +1,51 @@
-// create web server
-const express = require('express');
-const bodyParser = require('body-parser');
-const app = express();
-const port = 3000;
-const { Comment } = require('./models');
+// Create web server
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+var express = require('express');
+var router = express.Router();
 
-// GET /comments
-app.get('/comments', (req, res) => {
-  Comment.findAll()
-    .then((comments) => {
-      res.status(200).send(comments);
-    })
-    .catch((err) => {
-      console.log(err);
-      res.status(500).send('Internal Server Error');
-    });
+// Import the model (comments.js) to use its database functions.
+var comments = require('../models/comments.js');
+
+// Create all our routes and set up logic within those routes where required.
+router.get('/', function(req, res) {
+  comments.all(function(data) {
+    var hbsObject = {
+      comments: data
+    };
+    console.log(hbsObject);
+    res.render('index', hbsObject);
+  });
 });
 
-// POST /comments
-app.post('/comments', (req, res) => {
-  const { comment } = req.body;
-  Comment.create({
-    comment: comment,
-  })
-    .then(() => {
-      res.status(201).send('Created');
-    })
-    .catch((err) => {
-      console.log(err);
-      res.status(500).send('Internal Server Error');
-    });
+router.post('/comments', function(req, res) {
+  comments.create([
+    'comment', 'date'
+  ], [
+    req.body.comment, req.body.date
+  ], function() {
+    res.redirect('/');
+  });
 });
 
-// PUT /comments
-app.put('/comments/:id', (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  const { comment } = req.body;
-  Comment.update(
-    {
-      comment: comment,
-    },
-    {
-      where: { id: id },
-    }
-  )
-    .then(() => {
-      res.status(200).send('OK');
-    })
-    .catch((err) => {
-      console.log(err);
-      res.status(500).send('Internal Server Error');
-    });
+router.put('/comments/:id', function(req, res) {
+  var condition = 'id = ' + req.params.id;
+
+  console.log('condition', condition);
+
+  comments.update({
+    comment: req.body.comment
+  }, condition, function() {
+    res.redirect('/');
+  });
 });
 
-// DELETE /comments
-app.delete('/comments/:id', (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  Comment.destroy({
-    where: { id: id },
-  })
-    .then(() => {
-      res.status(204).send('No Content');
-    })
-    .catch((err) => {
-      console.log(err);
-      res.status(500).send('Internal Server Error');
-    });
+router.delete('/comments/:id', function(req, res) {
+  var condition = 'id = ' + req.params.id;
+
+  comments.delete(condition, function() {
+    res.redirect('/');
+  });
 });
 
-app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`);
-});
+// Export routes for server.js to use.
+module.exports = router;
